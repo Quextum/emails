@@ -114,14 +114,14 @@ class MailSender
     /**
      * @param string $type
      * @param array $settings
-     * @param array|stdClass $params
+     * @param array $templateVariables
      * @return Message
      * @throws InvalidArgumentException
      * @throws SendException
      */
-    public function send(string $type, array $settings, $params = []): Message
+    public function send(string $type, array $settings,array $templateVariables = []): Message
     {
-        $message = $this->createMessage($type, $settings, $params);
+        $message = $this->createMessage($type, $settings, $templateVariables);
         try {
             $this->onBeforeSend($message);
             $this->sender->send($message);
