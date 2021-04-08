@@ -55,7 +55,9 @@ class EmailsExtension extends DI\CompilerExtension
             $email,
             $recipient,
         )->castTo('array');*/
-        $recipient = Expect::string()->assert(static::IS_RECIPIENT, 'Name <email>');
+        $recipient = Expect::anyOf(
+            $email,Expect::string()->assert(static::IS_RECIPIENT, 'Name <email>')
+        );
         $recipients = Expect::anyOf(
             Expect::string(),
             Expect::arrayOf(Expect::string())
