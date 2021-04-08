@@ -36,7 +36,7 @@ class MailSender
     protected static array $setters = [
         'to' => 'addTo',
         'cc' => 'addCc',
-        'bb' => 'addBcc',
+        'bcc' => 'addBcc',
         'reply' => 'addReplyTo',
 
         'from' => 'setFrom',
