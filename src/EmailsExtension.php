@@ -68,7 +68,7 @@ class EmailsExtension extends DI\CompilerExtension
             'locale' => Expect::string()->pattern('[a-z]{2}(_[A-Z]{2})?')->nullable(),
             'to' => $recipients,
             'cc' => $recipients,
-            'bb' => $recipients,
+            'bcc' => $recipients,
             'reply' => $recipients,
             'from' => $recipient,
             'subject' => Expect::anyOf(Expect::type(Statement::class), Expect::string()),
