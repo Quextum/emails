@@ -15,6 +15,7 @@ use Nette\Mail\Mailer;
 use Nette\Mail\Message;
 use Nette\Mail\SendException;
 use Nette\Schema\Helpers;
+use Nette\Schema\Schema;
 use Nette\SmartObject;
 use Quextum\Emails\Translation\TranslationProvider;
 use stdClass;
@@ -60,6 +61,7 @@ class MailSender
     #[Inject]
     public LinkGenerator $linkGenerator;
 
+    private Schema $schema;
     public TranslationProvider|null $translation = null;
 
     protected array $defaults;
@@ -69,15 +71,18 @@ class MailSender
     /**
      * MailSender constructor.
      * @param bool $catchExceptions
+     * @param Schema $schema
      * @param array $defaults
      * @param string $templatesDirectory
      */
     public function __construct(
         bool $catchExceptions,
+        Schema $schema,
         array $defaults,
         string $templatesDirectory)
     {
         $this->catchExceptions = $catchExceptions;
+        $this->schema = $schema;
         $this->defaults = $defaults;
         $this->templatesDirectory = $templatesDirectory;
         $this->onBeforeSend[] = function (Message $message) {
@@ -119,7 +124,7 @@ class MailSender
      * @throws InvalidArgumentException
      * @throws SendException
      */
-    public function send(string $type, array $settings, array $templateVariables = []): Message
+    public function send(string $type, array $settings,array $templateVariables = []): Message
     {
         $message = $this->createMessage($type, $settings, $templateVariables);
         try {
@@ -162,8 +167,8 @@ class MailSender
         $template = $this->createTemplate();
         $template->setFile($file);
         $defaultConfiguration = $this->defaults[$type] ?? [];
-        $configuration = Helpers::merge($settings, $defaultConfiguration);
-        if ($variables = $configuration['variables'] ?? null) {
+        $configuration = $this->schema->merge($settings,$defaultConfiguration);
+        if ($variables = $configuration['variables']??null) {
             $template->setParameters($variables);
         }
         if ($this->translation) {

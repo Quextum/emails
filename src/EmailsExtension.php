@@ -26,8 +26,16 @@ class EmailsExtension extends DI\CompilerExtension
 {
     public const IS_RECIPIENT = [self::class, 'isRecipient'];
 
-    protected ServiceDefinition $sender;
+    private ServiceDefinition $sender;
     private ?ServiceDefinition $translation = null;
+
+    private Schema $schema;
+
+    public function __construct()
+    {
+        $this->schema = $this->getSenderConfigSchema();
+    }
+
 
     public static function isRecipient(string $value): bool
     {
@@ -44,16 +52,9 @@ class EmailsExtension extends DI\CompilerExtension
         return NoTranslationProvider::class;
     }
 
-    public function getConfigSchema(): Schema
+    public function getSenderConfigSchema(): Schema
     {
         $email = Expect::email();
-        /*$recipient = Expect::anyOf($email, Expect::string()->assert(static::IS_RECIPIENT, 'Name <email>'));
-        $recipients = Expect::anyOf(
-            Expect::arrayOf($email, Expect::string()),
-            Expect::arrayOf($recipient, Expect::int()),
-            $email,
-            $recipient,
-        )->castTo('array');*/
         $recipient = Expect::anyOf(
             $email, Expect::string()->assert(static::IS_RECIPIENT, 'Name <email>')
         );
@@ -61,11 +62,10 @@ class EmailsExtension extends DI\CompilerExtension
             Expect::string(),
             Expect::arrayOf(Expect::string())
         );
-
         $attachment = Expect::string()
             ->assert('is_file', 'Not file')
             ->assert('is_readable', 'Not readable');
-        $config = Expect::structure([
+        return Expect::structure([
             'locale' => Expect::string()->pattern('[a-z]{2}(_[A-Z]{2})?')->nullable(),
             'to' => $recipients,
             'cc' => $recipients,
@@ -79,7 +79,10 @@ class EmailsExtension extends DI\CompilerExtension
             'variables' => Expect::arrayOf(Expect::mixed(), Expect::string())
         ])->skipDefaults()
             ->castTo('array');
+    }
 
+    public function getConfigSchema(): Schema
+    {
         return Expect::structure([
             'templates' => Expect::string()
                 ->assert('is_dir')
@@ -89,7 +92,7 @@ class EmailsExtension extends DI\CompilerExtension
                 Expect::string()->assert(fn($class) => (new \ReflectionClass($class))->implementsInterface(TranslationProvider::class))
             ])->default(self::getDefaultTranslationProvider()),
             'catchExceptions' => Expect::bool(false)
-        ])->otherItems($config)
+        ])->otherItems($this->schema)
             ->castTo('array');
     }
 
@@ -100,9 +103,9 @@ class EmailsExtension extends DI\CompilerExtension
             [$newKey, $parent] = array_map('trim', explode('<', $key) + ['', '']);
             $prevConfig = $this->config[$parent] ?? null;
             if (isset($newConfig[$newKey])) {
-                $prevConfig = Helpers::merge($prevConfig, $newConfig[$newKey]);
+                $prevConfig = $this->schema->merge($prevConfig, $newConfig[$newKey]);
             }
-            $newConfig[$newKey] = Helpers::merge($value, $prevConfig);
+            $newConfig[$newKey] = $this->schema->merge($value, $prevConfig);
         }
         $this->config = $newConfig;
     }
@@ -127,6 +130,7 @@ class EmailsExtension extends DI\CompilerExtension
             ->addTag(DI\Extensions\InjectExtension::TAG_INJECT)
             ->setFactory(MailSender::class, [
                 'catchExceptions' => $config['catchExceptions'],
+                'schema' => $this->schema,
                 'defaults' => $defaults,
                 'templatesDirectory' => $config['templates']]);
 
