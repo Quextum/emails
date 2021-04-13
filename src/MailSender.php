@@ -86,13 +86,13 @@ class MailSender
         $this->onBeforeSend[] = function (Message $message) {
             $this->debugMail($message);
         };
-        $this->onError[] = function (\Exception $exception, Message $message, array $detail) {
+        /*$this->onError[] = function (\Exception $exception, Message $message, array $detail) {
             bdump($exception);
             bdump($detail);
         };
         $this->onConfig[] = function (array &$config) {
             bdump($config, 'onConfig');
-        };
+        };*/
     }
 
     public function debugMail(Message $message): void
