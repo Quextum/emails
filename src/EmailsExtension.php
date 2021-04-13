@@ -9,6 +9,7 @@ use Nette\DI\Definitions\Statement;
 use Nette\InvalidArgumentException;
 use Nette\InvalidStateException;
 use Nette\Schema\Expect;
+use Nette\Schema\Helpers;
 use Nette\Schema\Schema;
 use Nette\Utils\Strings;
 use Nette\Utils\Validators;
@@ -24,7 +25,6 @@ use Quextum\Emails\Translation\TranslationProvider;
 class EmailsExtension extends DI\CompilerExtension
 {
     public const IS_RECIPIENT = [self::class, 'isRecipient'];
-    public const MERGE_CONFIGURATION = [self::class, 'mergeConfiguration'];
 
     protected ServiceDefinition $sender;
     private ?ServiceDefinition $translation = null;
@@ -77,12 +77,11 @@ class EmailsExtension extends DI\CompilerExtension
             'embed' => Expect::arrayOf($attachment),
             'attachment' => Expect::arrayOf($attachment),
             'variables' => Expect::arrayOf(Expect::mixed(), Expect::string())
-        ])->castTo('array');
+        ])->skipDefaults()
+            ->castTo('array');
 
-        $parameters = $this->getContainerBuilder()->parameters;
         return Expect::structure([
             'templates' => Expect::string()
-                //->default("{$parameters['appDir']}/emails/templates")
                 ->assert('is_dir')
                 ->assert('is_readable'),
             'translation' => Expect::anyOf([
@@ -96,14 +95,16 @@ class EmailsExtension extends DI\CompilerExtension
 
     public function mergeConfiguration(): void
     {
-        foreach ($this->config as $key => &$value) {
+        $newConfig = [];
+        foreach ($this->config as $key => $value) {
             [$newKey, $parent] = array_map('trim', explode('<', $key) + ['', '']);
-            if ($parent) {
-                $oldConfig = (array)($this->config[$newKey] ?? []);
-                $this->config[$newKey] = array_merge($this->config[$parent], (array)$value, $oldConfig);
-                unset($this->config[$key]);
+            $prevConfig = $this->config[$parent] ?? null;
+            if (isset($newConfig[$newKey])) {
+                $prevConfig = Helpers::merge($prevConfig, $newConfig[$newKey]);
             }
+            $newConfig[$newKey] = Helpers::merge($value, $prevConfig);
         }
+        $this->config = $newConfig;
     }
 
     /**
