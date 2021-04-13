@@ -10,7 +10,6 @@ use Nette\InvalidArgumentException;
 use Nette\InvalidStateException;
 use Nette\Schema\Expect;
 use Nette\Schema\Schema;
-use Nette\Utils\Arrays;
 use Nette\Utils\Strings;
 use Nette\Utils\Validators;
 use Quextum\Emails\Translation\ContributeTranslationProvider;
@@ -56,7 +55,7 @@ class EmailsExtension extends DI\CompilerExtension
             $recipient,
         )->castTo('array');*/
         $recipient = Expect::anyOf(
-            $email,Expect::string()->assert(static::IS_RECIPIENT, 'Name <email>')
+            $email, Expect::string()->assert(static::IS_RECIPIENT, 'Name <email>')
         );
         $recipients = Expect::anyOf(
             Expect::string(),
@@ -83,7 +82,7 @@ class EmailsExtension extends DI\CompilerExtension
         $parameters = $this->getContainerBuilder()->parameters;
         return Expect::structure([
             'templates' => Expect::string()
-                ->default("{$parameters['appDir']}/emails/templates")
+                //->default("{$parameters['appDir']}/emails/templates")
                 ->assert('is_dir')
                 ->assert('is_readable'),
             'translation' => Expect::anyOf([
@@ -92,20 +91,19 @@ class EmailsExtension extends DI\CompilerExtension
             ])->default(self::getDefaultTranslationProvider()),
             'catchExceptions' => Expect::bool(false)
         ])->otherItems($config)
-            ->before(static::MERGE_CONFIGURATION)
             ->castTo('array');
     }
 
-    public static function mergeConfiguration(array &$config): array
+    public function mergeConfiguration(): void
     {
-        foreach ($config as $key => &$value) {
+        foreach ($this->config as $key => &$value) {
             [$newKey, $parent] = array_map('trim', explode('<', $key) + ['', '']);
             if ($parent) {
-                Arrays::renameKey($config, $key, $newKey);
-                $config[$newKey] = Arrays::mergeTree($config[$parent], (array)$value);
+                $oldConfig = (array)($this->config[$newKey] ?? []);
+                $this->config[$newKey] = array_merge($this->config[$parent], (array)$value, $oldConfig);
+                unset($this->config[$key]);
             }
         }
-        return $config;
     }
 
     /**
@@ -115,7 +113,7 @@ class EmailsExtension extends DI\CompilerExtension
      */
     public function loadConfiguration(): void
     {
-        parent::loadConfiguration();
+        $this->mergeConfiguration();
         $config = $this->getConfig();
         $builder = $this->getContainerBuilder();
         if ($config['translation']) {
@@ -135,8 +133,6 @@ class EmailsExtension extends DI\CompilerExtension
 
     public function beforeCompile(): void
     {
-
-        parent::beforeCompile();
         $builder = $this->getContainerBuilder();
         $app = $builder->getDefinitionByType(Application::class);
         if ($app instanceof ServiceDefinition) {
