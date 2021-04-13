@@ -119,7 +119,7 @@ class MailSender
      * @throws InvalidArgumentException
      * @throws SendException
      */
-    public function send(string $type, array $settings,array $templateVariables = []): Message
+    public function send(string $type, array $settings, array $templateVariables = []): Message
     {
         $message = $this->createMessage($type, $settings, $templateVariables);
         try {
@@ -163,7 +163,7 @@ class MailSender
         $template->setFile($file);
         $defaultConfiguration = $this->defaults[$type] ?? [];
         $configuration = Helpers::merge($settings, $defaultConfiguration);
-        if ($variables = $configuration['variables']) {
+        if ($variables = $configuration['variables'] ?? null) {
             $template->setParameters($variables);
         }
         if ($this->translation) {
