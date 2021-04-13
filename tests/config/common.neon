@@ -1,0 +1,15 @@
+extensions:
+    emails: Quextum\Emails\EmailsExtension
+
+emails:
+    templates: %appDir%/templates
+    x:
+        subject: "common X"
+        from: "common X <email@domain.com>"
+    a < x:
+        to: "common A extends common X <email@domain.com>"
+        variables:
+            commonVarA: commonValA
+    b:
+        variables:
+            localVarB: localValB

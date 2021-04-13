@@ -1,0 +1,17 @@
+emails:
+    x:
+        from: "local X <email@domain.com>"
+        to: "local X <email@domain.com>"
+    y:
+        from: "local Y <email@domain.com>"
+    a < x:
+        to: "local A extends local X <email@domain.com>"
+        variables!:
+            localVarA: localValA
+    b < a:
+        subject: B
+        to: "local B extends local A <email@domain.com>"
+        variables:
+            localVarB: localValB
+    d < x < y:
+        to: "local D extends local B extends local X <email@domain.com>"

@@ -18,19 +18,23 @@
     "nette/http": "^3.0",
     "nette/caching": "^3.0",
     "nette/schema": "^1.0",
-    "nette/di": "^3.0",
     "ext-json": "*",
     "latte/latte": "^2.10",
     "nette/application": "^3.1",
     "nette/mail": "^3.1"
   },
   "require-dev": {
-    "nette/tester": "^2.0"
+    "nette/tester": "^2.0",
+    "nette/di": "^3.0",
+    "nette/bootstrap": "^3.1"
   },
   "autoload": {
     "psr-4": {
       "Quextum\\Emails\\": "src"
     }
+  },
+  "autoload-dev": {
+    "psr-4": { "Quextum\\Emails\\Tests\\": "tests/" }
   },
   "minimum-stability": "stable",
   "config": {

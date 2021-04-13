@@ -14,11 +14,9 @@ use Nette\InvalidArgumentException;
 use Nette\Mail\Mailer;
 use Nette\Mail\Message;
 use Nette\Mail\SendException;
-use Nette\Schema\Helpers;
 use Nette\Schema\Schema;
 use Nette\SmartObject;
 use Quextum\Emails\Translation\TranslationProvider;
-use stdClass;
 use Tracy\Debugger;
 use function is_int;
 
@@ -124,7 +122,7 @@ class MailSender
      * @throws InvalidArgumentException
      * @throws SendException
      */
-    public function send(string $type, array $settings,array $templateVariables = []): Message
+    public function send(string $type, array $settings, array $templateVariables = []): Message
     {
         $message = $this->createMessage($type, $settings, $templateVariables);
         try {
@@ -151,6 +149,12 @@ class MailSender
         return $file;
     }
 
+    private function getConfiguration(string $type, $settings)
+    {
+        $defaultConfiguration = $this->defaults[$type] ?? [];
+        return $this->schema->merge($settings, $defaultConfiguration);
+    }
+
     /**
      * @param string $type
      * @param array $settings
@@ -166,9 +170,8 @@ class MailSender
         /** @var DefaultTemplate $template */
         $template = $this->createTemplate();
         $template->setFile($file);
-        $defaultConfiguration = $this->defaults[$type] ?? [];
-        $configuration = $this->schema->merge($settings,$defaultConfiguration);
-        if ($variables = $configuration['variables']??null) {
+        $configuration = $this->getConfiguration($type,$settings);
+        if ($variables = $configuration['variables'] ?? null) {
             $template->setParameters($variables);
         }
         if ($this->translation) {

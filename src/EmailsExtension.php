@@ -9,13 +9,13 @@ use Nette\DI\Definitions\Statement;
 use Nette\InvalidArgumentException;
 use Nette\InvalidStateException;
 use Nette\Schema\Expect;
-use Nette\Schema\Helpers;
 use Nette\Schema\Schema;
+use Nette\Utils\Arrays;
 use Nette\Utils\Strings;
 use Nette\Utils\Validators;
 use Quextum\Emails\Translation\ContributeTranslationProvider;
-use Quextum\Emails\Translation\NoTranslationProvider;
 use Quextum\Emails\Translation\TranslationProvider;
+use Tracy\Dumper;
 
 /**
  * Description of EmailsExtension
@@ -44,12 +44,12 @@ class EmailsExtension extends DI\CompilerExtension
         return $name && Validators::isEmail($email);
     }
 
-    public static function getDefaultTranslationProvider(): string
+    public function getDefaultTranslationProvider(): Statement|string|null
     {
         if (class_exists(\Contributte\Translation\Translator::class)) {
-            return ContributeTranslationProvider::class;
+            return new Statement(ContributeTranslationProvider::class, ['namespace' => $this->name]);
         }
-        return NoTranslationProvider::class;
+        return null;
     }
 
     public function getSenderConfigSchema(): Schema
@@ -86,11 +86,12 @@ class EmailsExtension extends DI\CompilerExtension
         return Expect::structure([
             'templates' => Expect::string()
                 ->assert('is_dir')
-                ->assert('is_readable'),
+                ->assert('is_readable')
+                ->required(),
             'translation' => Expect::anyOf([
                 Expect::type(DI\Definitions\Statement::class),
                 Expect::string()->assert(fn($class) => (new \ReflectionClass($class))->implementsInterface(TranslationProvider::class))
-            ])->default(self::getDefaultTranslationProvider()),
+            ])->default($this->getDefaultTranslationProvider()),
             'catchExceptions' => Expect::bool(false)
         ])->otherItems($this->schema)
             ->castTo('array');
@@ -98,16 +99,23 @@ class EmailsExtension extends DI\CompilerExtension
 
     public function mergeConfiguration(): void
     {
-        $newConfig = [];
-        foreach ($this->config as $key => $value) {
-            [$newKey, $parent] = array_map('trim', explode('<', $key) + ['', '']);
-            $prevConfig = $this->config[$parent] ?? null;
-            if (isset($newConfig[$newKey])) {
-                $prevConfig = $this->schema->merge($prevConfig, $newConfig[$newKey]);
+        $oldConfig = $this->config;
+        $this->config = [];
+        foreach ($oldConfig as $key => $value) {
+            $prevConfig = null;
+            $keys = array_map('trim', explode('<', $key));
+            $newKey = array_shift($keys);
+            foreach (array_reverse($keys) as $parent) {
+                if (!array_key_exists($parent, $this->config)) {
+                    throw new InvalidArgumentException("Key '$parent' for entry '$key' not exists");
+                }
+                $prevConfig = $this->schema->merge($prevConfig, $this->config[$parent]);
             }
-            $newConfig[$newKey] = $this->schema->merge($value, $prevConfig);
+            if (isset($this->config[$newKey])) {
+                $prevConfig = $this->schema->merge($prevConfig, $this->config[$newKey]);
+            }
+            $this->config[$newKey] = $this->schema->merge($value, $prevConfig);
         }
-        $this->config = $newConfig;
     }
 
     /**
@@ -122,7 +130,7 @@ class EmailsExtension extends DI\CompilerExtension
         $builder = $this->getContainerBuilder();
         if ($config['translation']) {
             $this->translation = $builder->addDefinition($this->prefix('translation'))
-                ->setFactory($config['translation'], is_string($config['translation']) ? ['namespace' => $this->name] : [])
+                ->setFactory($config['translation'])
                 ->setType(TranslationProvider::class);
         }
         $defaults = array_diff_key($config, array_flip(['templates', 'translation', 'catchExceptions']));

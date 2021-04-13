@@ -15,7 +15,6 @@ Poté rozšíření nastavte. Ukázková konfigurace:
         title: Title
 
     emails:
-        translator: @translation.emails.translator
         templates: '%appDir%/emails/templates'
         default:
             from: [noreply@%domain%, %title%]
