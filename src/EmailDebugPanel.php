@@ -22,6 +22,7 @@ class EmailDebugPanel implements IBarPanel
 		$header->addHtml(Debugger::dump($message, true));
 		$src = $message->getHtmlBody();
 		$src = Filters::spacelessHtml($src);
+        $src = Html::fromHtml($src);
 		$iframe = Html::el('iframe', [
 				'src' => 'data:text/html,' . $src,
 				'srcdoc' => $src,
